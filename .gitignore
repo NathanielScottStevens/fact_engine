@@ -22,3 +22,9 @@ erl_crash.dump
 # Ignore package tarball (built via "mix hex.build").
 fact_engine-*.tar
 
+# Vim
+*.swp
+
+# Executable
+fact_engine
+

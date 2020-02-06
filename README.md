@@ -1,21 +1,6 @@
 # FactEngine
 
-**TODO: Add description**
-
-## Installation
-
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `fact_engine` to your list of dependencies in `mix.exs`:
-
-```elixir
-def deps do
-  [
-    {:fact_engine, "~> 0.1.0"}
-  ]
-end
-```
-
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at [https://hexdocs.pm/fact_engine](https://hexdocs.pm/fact_engine).
-
+## Development Notes
+* I debated between designing this project as an application or an escript.
+Ultimately, it felt like using a genserver was a little much for such a 
+simple application.

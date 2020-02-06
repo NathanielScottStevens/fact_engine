@@ -7,7 +7,9 @@ defmodule FactEngine.MixProject do
       version: "0.1.0",
       elixir: "~> 1.9",
       start_permanent: Mix.env() == :prod,
-      deps: deps()
+      deps: deps(),
+      escript: [main_module: FactEngine],
+      aliases: aliases()
     ]
   end
 
@@ -15,7 +17,12 @@ defmodule FactEngine.MixProject do
   def application do
     [
       extra_applications: [:logger],
-      mod: {FactEngine.Application, []}
+    ]
+  end
+
+  defp aliases do
+    [
+      exec: ["escript.build", "cmd ./fact_engine"]
     ]
   end
 
