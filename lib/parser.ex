@@ -3,8 +3,9 @@ defmodule FactEngine.Parser do
   def parse(input) do
     result =
       input
-      |> String.replace("(", " ")
-      |> String.replace(")", " ")
+      |> String.replace("(", "")
+      |> String.replace(")", "")
+      |> String.replace(",", "")
       |> String.split("\n")
       |> Enum.map(&String.split/1)
       |> Enum.map(&convert/1)
