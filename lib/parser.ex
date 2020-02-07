@@ -5,10 +5,11 @@ defmodule FactEngine.Parser do
       input
       |> String.replace("(", " ")
       |> String.replace(")", " ")
-      |> String.split()
-      |> convert()
+      |> String.split("\n")
+      |> Enum.map(&String.split/1)
+      |> Enum.map(&convert/1)
 
-    {:ok, [result]}
+    {:ok, result}
   end
 
   def convert(["INPUT", statement | args]) do
