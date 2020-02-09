@@ -26,4 +26,14 @@ defmodule EvaluateTest do
 
     assert {:ok, ["true"]} == Evaluate.eval(input)
   end
+
+  # test "returns all matching single arguments" do
+  #   input = [
+  #     {:input, "is_a_cat", ["lucy"]},
+  #     {:input, "is_a_cat", ["ben"]},
+  #     {:query, "is_a_cat", ["X"]}
+  #   ]
+  #
+  #   assert {:ok, [[%{"X" => "ben"}, %{"X" => "lucy"}]]} == Evaluate.eval(input)
+  # end
 end
