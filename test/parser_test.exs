@@ -11,6 +11,7 @@ defmodule ParserTest do
   # INPUT are_friends (sam, sam)
   # QUERY are_friends (Y, Y)
 
+  # TODO: Add error cases
   test "parses input" do
     expected = {:ok, [{:input, "is_a_cat", ["lucy"]}]}
     actual = Parser.parse("INPUT is_a_cat (lucy)")
