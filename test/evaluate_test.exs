@@ -41,4 +41,14 @@ defmodule EvaluateTest do
 
     assert {:ok, [[%{"X" => "ben"}, %{"X" => "lucy"}]]} == Evaluate.eval(input)
   end
+
+  # test "can handle single unbounded variable" do
+  #   input = [
+  #     {:input, "are_friends", ["alex", "sam"]},
+  #     {:input, "are_friends", ["alex", "ben"]},
+  #     {:query, "are_friends", ["alex", "X"]}
+  #   ]
+  #
+  #   assert {:ok, [[%{"X" => "sam"}, %{"X" => "ben"}]]} == Evaluate.eval(input)
+  # end
 end

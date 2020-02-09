@@ -20,26 +20,14 @@ defmodule FactEngine.Evaluate do
     %{facts: facts, bound_args: bound_args} = state
 
     updated_facts = update_facts(facts, statement, args)
-    updated_bound_args = MapSet.union(bound_args, MapSet.new(args))
+    updated_bound_args = update_bound_args(bound_args, args)
 
     {:cont, {%{facts: updated_facts, bound_args: updated_bound_args}, output}}
   end
 
   defp eval_command({:query, statement, args}, {state, output}) do
-    %{facts: facts, bound_args: bound_args} = state
-
-    if Map.has_key?(facts, statement) do
-      result =
-        if MapSet.member?(bound_args, Enum.at(args, 0)) do
-          # Only one bound argument
-          eval_bool(facts, statement, args)
-        else
-          IO.inspect(bound_args, label: "lib/evaluate.ex:37")
-          IO.inspect(args, label: "lib/evaluate.ex:38")
-          # Only one unbound argument
-          Enum.map(facts[statement], &%{Enum.at(args, 0) => &1})
-        end
-
+    if statement_defined?(state, statement) do
+      result = evaluate_statement(statement, args, state)
       {:cont, {state, [result | output]}}
     else
       {:halt, {state, ["error: #{statement} is undefined"]}}
@@ -52,6 +40,35 @@ defmodule FactEngine.Evaluate do
 
   defp update_facts(facts, statement, args) do
     Map.update(facts, statement, [args], fn old -> old ++ args end)
+  end
+
+  defp update_bound_args(bound_args, args) do
+    MapSet.union(bound_args, MapSet.new(args))
+  end
+
+  defp statement_defined?(%{facts: facts}, statement), do: Map.has_key?(facts, statement)
+
+  defp evaluate_statement(statement, args, state) do
+    %{facts: facts, bound_args: bound_args} = state
+
+    # If all args are bound
+    #   evaluate to boolean
+    # If all args are unbound
+    #   return full list of args
+    # If both bound and unbound
+    #   show valid matches
+
+    cond do
+      # MapSet.equal?
+      Enum.all?(args, &MapSet.member?(bound_args, &1)) ->
+        eval_bool(facts, statement, args)
+
+      # MapSet.disjoint?
+      Enum.all?(args, &(not MapSet.member?(bound_args, &1))) ->
+        Enum.map(facts[statement], &%{Enum.at(args, 0) => &1})
+
+        # MapSet.difference/intersection
+    end
   end
 
   defp eval_bool(facts, statement, [arg]) do
