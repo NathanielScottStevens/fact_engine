@@ -20,9 +20,30 @@ defmodule FactEngine.Evaluate do
     %{facts: facts, bound_args: bound_args} = state
 
     updated_facts = update_facts(facts, statement, args)
-    updated_bound_args = MapSet.union(bound_args, MapSet.new(bound_args))
+    updated_bound_args = MapSet.union(bound_args, MapSet.new(args))
 
     {:cont, {%{facts: updated_facts, bound_args: updated_bound_args}, output}}
+  end
+
+  defp eval_command({:query, statement, args}, {state, output}) do
+    %{facts: facts, bound_args: bound_args} = state
+
+    if Map.has_key?(facts, statement) do
+      result =
+        if MapSet.member?(bound_args, Enum.at(args, 0)) do
+          # Only one bound argument
+          eval_bool(facts, statement, args)
+        else
+          IO.inspect(bound_args, label: "lib/evaluate.ex:37")
+          IO.inspect(args, label: "lib/evaluate.ex:38")
+          # Only one unbound argument
+          Enum.map(facts[statement], &%{Enum.at(args, 0) => &1})
+        end
+
+      {:cont, {state, [result | output]}}
+    else
+      {:halt, {state, ["error: #{statement} is undefined"]}}
+    end
   end
 
   defp update_facts(facts, statement, [arg]) do
@@ -31,18 +52,6 @@ defmodule FactEngine.Evaluate do
 
   defp update_facts(facts, statement, args) do
     Map.update(facts, statement, [args], fn old -> old ++ args end)
-  end
-
-  defp eval_command({:query, statement, args}, {state, output}) do
-    %{facts: facts, bound_args: bound_args} = state
-
-    if Map.has_key?(facts, statement) do
-      result = eval_bool(facts, statement, args)
-
-      {:cont, {state, [result | output]}}
-    else
-      {:halt, {state, ["error: #{statement} is undefined"]}}
-    end
   end
 
   defp eval_bool(facts, statement, [arg]) do

@@ -8,7 +8,12 @@ defmodule EvaluateTest do
   end
 
   test "returns single argument statement as false when false" do
-    input = [{:input, "is_a_cat", ["lucy"]}, {:query, "is_a_cat", ["ben"]}]
+    input = [
+      {:input, "is_a_cat", ["lucy"]},
+      {:input, "is_a_dog", ["ben"]},
+      {:query, "is_a_cat", ["ben"]}
+    ]
+
     assert {:ok, ["false"]} == Evaluate.eval(input)
   end
 
@@ -27,13 +32,13 @@ defmodule EvaluateTest do
     assert {:ok, ["true"]} == Evaluate.eval(input)
   end
 
-  # test "returns all matching single arguments" do
-  #   input = [
-  #     {:input, "is_a_cat", ["lucy"]},
-  #     {:input, "is_a_cat", ["ben"]},
-  #     {:query, "is_a_cat", ["X"]}
-  #   ]
-  #
-  #   assert {:ok, [[%{"X" => "ben"}, %{"X" => "lucy"}]]} == Evaluate.eval(input)
-  # end
+  test "returns all matching single arguments" do
+    input = [
+      {:input, "is_a_cat", ["lucy"]},
+      {:input, "is_a_cat", ["ben"]},
+      {:query, "is_a_cat", ["X"]}
+    ]
+
+    assert {:ok, [[%{"X" => "ben"}, %{"X" => "lucy"}]]} == Evaluate.eval(input)
+  end
 end
