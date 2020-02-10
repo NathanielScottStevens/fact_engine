@@ -2,16 +2,6 @@ defmodule ParserTest do
   use ExUnit.Case
   alias FactEngine.Parser
 
-  # INPUT is_a_cat (lucy)
-  # QUERY is_a_cat (lucy)
-  # INPUT are_friends (alex, sam)
-  # QUERY are_friends (X, sam)
-  # QUERY is_a_cat (X)
-  # QUERY are_friends (X, Y)
-  # INPUT are_friends (sam, sam)
-  # QUERY are_friends (Y, Y)
-
-  # TODO: Add error cases
   test "parses input" do
     expected = {:ok, [{:input, "is_a_cat", MapSet.new(["lucy"])}]}
     actual = Parser.parse("INPUT is_a_cat (lucy)")
@@ -36,6 +26,15 @@ defmodule ParserTest do
        [{:input, "is_a_cat", MapSet.new(["lucy"])}, {:query, "is_a_cat", MapSet.new(["lucy"])}]}
 
     actual = Parser.parse("INPUT is_a_cat (lucy)\nQUERY is_a_cat (lucy)")
+    assert expected == actual
+  end
+
+  test "trims whitespace" do
+    expected =
+      {:ok,
+       [{:input, "is_a_cat", MapSet.new(["lucy"])}, {:query, "is_a_cat", MapSet.new(["lucy"])}]}
+
+    actual = Parser.parse(" \nINPUT is_a_cat (lucy)\nQUERY is_a_cat (lucy)  \n\n")
     assert expected == actual
   end
 end

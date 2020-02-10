@@ -88,7 +88,8 @@ defmodule FactEngine.Evaluate do
   end
 
   defp eval_single_unbound_arg(statement_facts, arg) do
-    Enum.map(statement_facts, &%{arg => &1})
+    # TODO This line is a little wonky
+    Enum.map(statement_facts, &%{arg => MapSet.to_list(&1) |> hd()})
   end
 
   defp eval_one_of_two_unbound_args(statement_facts, args, bound_args) do

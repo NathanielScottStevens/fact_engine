@@ -3,11 +3,13 @@ defmodule FactEngine.Parser do
   def parse(input) do
     result =
       input
+      |> String.trim()
       |> String.replace("(", "")
       |> String.replace(")", "")
       |> String.replace(",", "")
       |> String.split("\n")
       |> Enum.map(&String.split/1)
+      |> IO.inspect(label: "lib/parser.ex:11")
       |> Enum.map(&convert/1)
 
     {:ok, result}

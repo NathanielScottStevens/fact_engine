@@ -43,7 +43,7 @@ defmodule EvaluateTest do
       {:query, "is_a_cat", MapSet.new(["X"])}
     ]
 
-    expected = {:ok, [[%{"X" => MapSet.new(["ben"])}, %{"X" => MapSet.new(["lucy"])}]]}
+    expected = {:ok, [[%{"X" => "ben"}, %{"X" => "lucy"}]]}
 
     assert expected == Evaluate.eval(input)
   end
