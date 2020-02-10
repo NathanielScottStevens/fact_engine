@@ -62,16 +62,26 @@ defmodule FactEngine.Evaluate do
       all_args_bound?(args, bound_args) ->
         eval_predicate(statement_facts, args)
 
-      only_one_arg_unbound?(args, bound_args) ->
+      only_one_of_one_args_unbound?(args, bound_args) ->
         eval_single_unbound_arg(statement_facts, Enum.at(args, 0))
 
+      one_of_two_args_unbound?(args, bound_args) ->
+        eval_one_of_two_unbound_args(statement_facts, args, bound_args)
+
+      true ->
+        nil
         # MapSet.difference/intersection
     end
   end
 
   defp all_args_bound?(args, bound_args), do: MapSet.subset?(args, bound_args)
 
-  defp only_one_arg_unbound?(args, bound_args), do: MapSet.disjoint?(bound_args, args)
+  defp only_one_of_one_args_unbound?(args, bound_args), do: MapSet.disjoint?(bound_args, args)
+
+  defp one_of_two_args_unbound?(args, bound_args) do
+    num_of_unbound_args = MapSet.difference(args, bound_args) |> MapSet.size()
+    num_of_unbound_args == 1
+  end
 
   defp eval_predicate(statement_facts, args) do
     MapSet.member?(statement_facts, args)
@@ -79,5 +89,18 @@ defmodule FactEngine.Evaluate do
 
   defp eval_single_unbound_arg(statement_facts, arg) do
     Enum.map(statement_facts, &%{arg => &1})
+  end
+
+  defp eval_one_of_two_unbound_args(statement_facts, args, bound_args) do
+    statement_facts
+    |> MapSet.to_list()
+    |> Enum.reject(&MapSet.disjoint?(&1, args))
+    |> Enum.map(fn fact ->
+      [variable] = Enum.reject(args, &MapSet.member?(bound_args, &1))
+
+      [value] = MapSet.difference(fact, args) |> MapSet.to_list()
+
+      %{variable => value}
+    end)
   end
 end

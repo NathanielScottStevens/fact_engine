@@ -48,13 +48,14 @@ defmodule EvaluateTest do
     assert expected == Evaluate.eval(input)
   end
 
-  # test "can handle single unbounded variable" do
-  #   input = [
-  #     {:input, "are_friends", MapSet.new(["alex", "sam"])},
-  #     {:input, "are_friends", MapSet.new(["alex", "ben"])},
-  #     {:query, "are_friends", MapSet.new(["alex", "X"])}
-  #   ]
-  #
-  #   assert {:ok, [[%{"X" => "sam"}, %{"X" => "ben"}]]} == Evaluate.eval(input)
-  # end
+  test "can handle single unbounded variable" do
+    input = [
+      {:input, "are_friends", MapSet.new(["alex", "sam"])},
+      {:input, "are_friends", MapSet.new(["alex", "ben"])},
+      {:query, "are_friends", MapSet.new(["alex", "X"])}
+    ]
+
+    # This is a poorly written assertion, it demands the list to be in a specific order
+    assert {:ok, [[%{"X" => "ben"}, %{"X" => "sam"}]]} == Evaluate.eval(input)
+  end
 end
