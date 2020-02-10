@@ -3,50 +3,56 @@ defmodule EvaluateTest do
   alias FactEngine.Evaluate
 
   test "returns single argument statement as true when true" do
-    input = [{:input, "is_a_cat", ["lucy"]}, {:query, "is_a_cat", ["lucy"]}]
-    assert {:ok, ["true"]} == Evaluate.eval(input)
+    input = [
+      {:input, "is_a_cat", MapSet.new(["lucy"])},
+      {:query, "is_a_cat", MapSet.new(["lucy"])}
+    ]
+
+    assert {:ok, [true]} == Evaluate.eval(input)
   end
 
   test "returns single argument statement as false when false" do
     input = [
-      {:input, "is_a_cat", ["lucy"]},
-      {:input, "is_a_dog", ["ben"]},
-      {:query, "is_a_cat", ["ben"]}
+      {:input, "is_a_cat", MapSet.new(["lucy"])},
+      {:input, "is_a_dog", MapSet.new(["ben"])},
+      {:query, "is_a_cat", MapSet.new(["ben"])}
     ]
 
-    assert {:ok, ["false"]} == Evaluate.eval(input)
+    assert {:ok, [false]} == Evaluate.eval(input)
   end
 
   test "returns error when statement is undefined" do
-    input = [{:query, "is_a_cat", ["lucy"]}]
+    input = [{:query, "is_a_cat", MapSet.new(["lucy"])}]
     # TODO give better error message
     assert {:ok, ["error: is_a_cat is undefined"]} == Evaluate.eval(input)
   end
 
   test "can handle multiple arg statements" do
     input = [
-      {:input, "are_friends", ["alex", "sam"]},
-      {:query, "are_friends", ["alex", "sam"]}
+      {:input, "are_friends", MapSet.new(["alex", "sam"])},
+      {:query, "are_friends", MapSet.new(["alex", "sam"])}
     ]
 
-    assert {:ok, ["true"]} == Evaluate.eval(input)
+    assert {:ok, [true]} == Evaluate.eval(input)
   end
 
   test "returns all matching single arguments" do
     input = [
-      {:input, "is_a_cat", ["lucy"]},
-      {:input, "is_a_cat", ["ben"]},
-      {:query, "is_a_cat", ["X"]}
+      {:input, "is_a_cat", MapSet.new(["lucy"])},
+      {:input, "is_a_cat", MapSet.new(["ben"])},
+      {:query, "is_a_cat", MapSet.new(["X"])}
     ]
 
-    assert {:ok, [[%{"X" => "ben"}, %{"X" => "lucy"}]]} == Evaluate.eval(input)
+    expected = {:ok, [[%{"X" => MapSet.new(["ben"])}, %{"X" => MapSet.new(["lucy"])}]]}
+
+    assert expected == Evaluate.eval(input)
   end
 
   # test "can handle single unbounded variable" do
   #   input = [
-  #     {:input, "are_friends", ["alex", "sam"]},
-  #     {:input, "are_friends", ["alex", "ben"]},
-  #     {:query, "are_friends", ["alex", "X"]}
+  #     {:input, "are_friends", MapSet.new(["alex", "sam"])},
+  #     {:input, "are_friends", MapSet.new(["alex", "ben"])},
+  #     {:query, "are_friends", MapSet.new(["alex", "X"])}
   #   ]
   #
   #   assert {:ok, [[%{"X" => "sam"}, %{"X" => "ben"}]]} == Evaluate.eval(input)

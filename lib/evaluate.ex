@@ -1,7 +1,7 @@
 defmodule FactEngine.Evaluate do
   @type command() :: :input | :query
   @type statement() :: String.t()
-  @type args() :: [String.t()]
+  @type args() :: %MapSet{}
   @type output() :: [String.t()]
 
   @type state() :: %{facts: %{statement() => args | [args]}, bound_args: %MapSet{}}
@@ -34,16 +34,12 @@ defmodule FactEngine.Evaluate do
     end
   end
 
-  defp update_facts(facts, statement, [arg]) do
-    Map.update(facts, statement, [arg], fn old -> [arg | old] end)
-  end
-
   defp update_facts(facts, statement, args) do
-    Map.update(facts, statement, [args], fn old -> old ++ args end)
+    Map.update(facts, statement, MapSet.new([args]), fn old -> MapSet.put(old, args) end)
   end
 
   defp update_bound_args(bound_args, args) do
-    MapSet.union(bound_args, MapSet.new(args))
+    MapSet.union(bound_args, args)
   end
 
   defp statement_defined?(%{facts: facts}, statement), do: Map.has_key?(facts, statement)
@@ -57,27 +53,31 @@ defmodule FactEngine.Evaluate do
     #   return full list of args
     # If both bound and unbound
     #   show valid matches
+    #
+    statement_facts = facts[statement]
+    # IO.inspect(bound_args, label: "lib/evaluate.ex:58")
+    # IO.inspect(args, label: "lib/evaluate.ex:59")
 
     cond do
-      # MapSet.equal?
-      Enum.all?(args, &MapSet.member?(bound_args, &1)) ->
-        eval_bool(facts, statement, args)
+      all_args_bound?(args, bound_args) ->
+        eval_predicate(statement_facts, args)
 
-      # MapSet.disjoint?
-      Enum.all?(args, &(not MapSet.member?(bound_args, &1))) ->
-        Enum.map(facts[statement], &%{Enum.at(args, 0) => &1})
+      only_one_arg_unbound?(args, bound_args) ->
+        eval_single_unbound_arg(statement_facts, Enum.at(args, 0))
 
         # MapSet.difference/intersection
     end
   end
 
-  defp eval_bool(facts, statement, [arg]) do
-    Enum.member?(facts[statement], arg) |> to_string()
+  defp all_args_bound?(args, bound_args), do: MapSet.subset?(args, bound_args)
+
+  defp only_one_arg_unbound?(args, bound_args), do: MapSet.disjoint?(bound_args, args)
+
+  defp eval_predicate(statement_facts, args) do
+    MapSet.member?(statement_facts, args)
   end
 
-  defp eval_bool(facts, statement, args) do
-    # TODO improve effeciency of Enum.reverse, maybe use MapSets
-    Enum.any?(facts[statement], fn x -> x == args || x == Enum.reverse(args) end)
-    |> to_string()
+  defp eval_single_unbound_arg(statement_facts, arg) do
+    Enum.map(statement_facts, &%{arg => &1})
   end
 end
