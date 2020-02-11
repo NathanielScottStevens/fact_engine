@@ -10,9 +10,11 @@ defmodule FactEngine.Evaluate do
   @spec eval([{command(), statement(), args()}]) :: {:ok, output()}
   def eval(input) do
     {state, output} =
-      Enum.reduce_while(input, {%{facts: %{}, bound_args: MapSet.new()}, []}, &eval_command/2)
+      Enum.reduce(input, {%{facts: %{}, bound_args: MapSet.new()}, []}, &eval_command/2)
 
-    {:ok, output}
+    query_output = Enum.reverse(output)
+
+    {:ok, query_output}
   end
 
   # @spec eval_command({command(), statement(), args()}) :: {:cont | :halt, state(), output()}
@@ -22,16 +24,13 @@ defmodule FactEngine.Evaluate do
     updated_facts = update_facts(facts, statement, args)
     updated_bound_args = update_bound_args(bound_args, args)
 
-    {:cont, {%{facts: updated_facts, bound_args: updated_bound_args}, output}}
+    {%{facts: updated_facts, bound_args: updated_bound_args}, output}
   end
 
   defp eval_command({:query, statement, args}, {state, output}) do
-    if statement_defined?(state, statement) do
-      result = evaluate_statement(statement, args, state)
-      {:cont, {state, [result | output]}}
-    else
-      {:halt, {state, ["error: #{statement} is undefined"]}}
-    end
+    result = evaluate_statement(statement, args, state)
+
+    {state, [result | output]}
   end
 
   defp update_facts(facts, statement, args) do
@@ -42,23 +41,14 @@ defmodule FactEngine.Evaluate do
     MapSet.union(bound_args, args)
   end
 
-  defp statement_defined?(%{facts: facts}, statement), do: Map.has_key?(facts, statement)
-
   defp evaluate_statement(statement, args, state) do
     %{facts: facts, bound_args: bound_args} = state
-
-    # If all args are bound
-    #   evaluate to boolean
-    # If all args are unbound
-    #   return full list of args
-    # If both bound and unbound
-    #   show valid matches
-    #
     statement_facts = facts[statement]
-    # IO.inspect(bound_args, label: "lib/evaluate.ex:58")
-    # IO.inspect(args, label: "lib/evaluate.ex:59")
 
     cond do
+      statement_undefined?(state, statement) ->
+        false
+
       all_args_bound?(args, bound_args) ->
         eval_predicate(statement_facts, args)
 
@@ -73,6 +63,8 @@ defmodule FactEngine.Evaluate do
         # MapSet.difference/intersection
     end
   end
+
+  defp statement_undefined?(%{facts: facts}, statement), do: not Map.has_key?(facts, statement)
 
   defp all_args_bound?(args, bound_args), do: MapSet.subset?(args, bound_args)
 

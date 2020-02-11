@@ -11,6 +11,8 @@ defmodule FactEngine.Formatter do
     ["---" | Enum.map(line, &format_map/1)]
   end
 
+  defp format_line(line), do: IO.inspect(line)
+
   defp format_map(map) when is_map(map) and map_size(map) == 1 do
     [{k, v}] = Map.to_list(map)
     "#{k}: #{v}"

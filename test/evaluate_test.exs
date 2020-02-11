@@ -21,10 +21,21 @@ defmodule EvaluateTest do
     assert {:ok, [false]} == Evaluate.eval(input)
   end
 
-  test "returns error when statement is undefined" do
+  test "returns multiple queries" do
+    input = [
+      {:input, "is_a_cat", MapSet.new(["lucy"])},
+      {:input, "is_a_dog", MapSet.new(["ben"])},
+      {:query, "is_a_cat", MapSet.new(["ben"])},
+      {:query, "is_a_cat", MapSet.new(["lucy"])}
+    ]
+
+    assert {:ok, [false, true]} == Evaluate.eval(input)
+  end
+
+  test "returns false when statement is undefined" do
     input = [{:query, "is_a_cat", MapSet.new(["lucy"])}]
     # TODO give better error message
-    assert {:ok, ["error: is_a_cat is undefined"]} == Evaluate.eval(input)
+    assert {:ok, [false]} == Evaluate.eval(input)
   end
 
   test "can handle multiple arg statements" do
