@@ -4,69 +4,80 @@ defmodule EvaluateTest do
 
   test "returns single argument statement as true when true" do
     input = [
-      {:input, "is_a_cat", MapSet.new(["lucy"])},
-      {:query, "is_a_cat", MapSet.new(["lucy"])}
+      {:input, "is_a_cat", ["lucy"]},
+      {:query, "is_a_cat", ["lucy"]}
     ]
 
-    assert {:ok, [true]} == Evaluate.eval(input)
+    assert {:ok, [[[true]]]} == Evaluate.eval(input)
   end
 
   test "returns single argument statement as false when false" do
     input = [
-      {:input, "is_a_cat", MapSet.new(["lucy"])},
-      {:input, "is_a_dog", MapSet.new(["ben"])},
-      {:query, "is_a_cat", MapSet.new(["ben"])}
+      {:input, "is_a_cat", ["lucy"]},
+      {:input, "is_a_dog", ["ben"]},
+      {:query, "is_a_cat", ["ben"]}
     ]
 
-    assert {:ok, [false]} == Evaluate.eval(input)
+    assert {:ok, [[[false]]]} == Evaluate.eval(input)
   end
 
   test "returns multiple queries" do
     input = [
-      {:input, "is_a_cat", MapSet.new(["lucy"])},
-      {:input, "is_a_dog", MapSet.new(["ben"])},
-      {:query, "is_a_cat", MapSet.new(["ben"])},
-      {:query, "is_a_cat", MapSet.new(["lucy"])}
+      {:input, "is_a_cat", ["lucy"]},
+      {:input, "is_a_dog", ["ben"]},
+      {:query, "is_a_cat", ["ben"]},
+      {:query, "is_a_cat", ["lucy"]}
     ]
 
-    assert {:ok, [false, true]} == Evaluate.eval(input)
+    assert {:ok, [[[false]], [[true]]]} == Evaluate.eval(input)
   end
 
   test "returns false when statement is undefined" do
-    input = [{:query, "is_a_cat", MapSet.new(["lucy"])}]
-    # TODO give better error message
-    assert {:ok, [false]} == Evaluate.eval(input)
+    input = [{:query, "is_a_cat", ["lucy"]}]
+    assert {:ok, [[[false]]]} == Evaluate.eval(input)
   end
 
   test "can handle multiple arg statements" do
     input = [
-      {:input, "are_friends", MapSet.new(["alex", "sam"])},
-      {:query, "are_friends", MapSet.new(["alex", "sam"])}
+      {:input, "are_friends", ["alex", "sam"]},
+      {:query, "are_friends", ["alex", "sam"]}
     ]
 
-    assert {:ok, [true]} == Evaluate.eval(input)
+    assert {:ok, [[[true]]]} == Evaluate.eval(input)
   end
 
   test "returns all matching single arguments" do
     input = [
-      {:input, "is_a_cat", MapSet.new(["lucy"])},
-      {:input, "is_a_cat", MapSet.new(["ben"])},
-      {:query, "is_a_cat", MapSet.new(["X"])}
+      {:input, "is_a_cat", ["lucy"]},
+      {:input, "is_a_cat", ["ben"]},
+      {:query, "is_a_cat", ["X"]}
     ]
 
-    expected = {:ok, [[%{"X" => "ben"}, %{"X" => "lucy"}]]}
+    expected = {:ok, [[[{"X", "ben"}], [{"X", "lucy"}]]]}
 
     assert expected == Evaluate.eval(input)
   end
 
   test "can handle single unbounded variable" do
     input = [
-      {:input, "are_friends", MapSet.new(["alex", "sam"])},
-      {:input, "are_friends", MapSet.new(["alex", "ben"])},
-      {:query, "are_friends", MapSet.new(["alex", "X"])}
+      {:input, "are_friends", ["alex", "sam"]},
+      {:input, "are_friends", ["alex", "ben"]},
+      {:query, "are_friends", ["alex", "X"]}
     ]
 
-    # This is a poorly written assertion, it demands the list to be in a specific order
-    assert {:ok, [[%{"X" => "ben"}, %{"X" => "sam"}]]} == Evaluate.eval(input)
+    expected = {:ok, [[[true, {"X", "ben"}], [true, {"X", "sam"}]]]}
+    assert expected == Evaluate.eval(input)
+  end
+
+  test "works with triplets" do
+    input = [
+      {:input, "make_a_triple", ["3", "4", "5"]},
+      {:input, "make_a_triple", ["5", "12", "13"]},
+      {:query, "make_a_triple", ["X", "4", "Y"]},
+      {:query, "make_a_triple", ["X", "X", "Y"]}
+    ]
+
+    expected = {:ok, [[[false], [{"X", "3"}, true, {"Y", "5"}]], [[false], [false]]]}
+    assert expected == Evaluate.eval(input)
   end
 end

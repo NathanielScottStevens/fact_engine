@@ -1,99 +1,69 @@
 defmodule FactEngine.Evaluate do
-  @type command() :: :input | :query
-  @type statement() :: String.t()
-  @type args() :: %MapSet{}
-  @type output() :: [String.t()]
-
-  @type state() :: %{facts: %{statement() => args | [args]}, bound_args: %MapSet{}}
-  # state = %{facts: %{"is_a_cat": ["lucy"], "are_friends": [["lucy", "mike"]]}, args: ["lucy", "mike"]}
-
-  @spec eval([{command(), statement(), args()}]) :: {:ok, output()}
   def eval(input) do
-    {state, output} =
-      Enum.reduce(input, {%{facts: %{}, bound_args: MapSet.new()}, []}, &eval_command/2)
-
+    {_, _, output} = Enum.reduce(input, {%{}, MapSet.new(), []}, &eval_command/2)
     query_output = Enum.reverse(output)
 
     {:ok, query_output}
   end
 
-  # @spec eval_command({command(), statement(), args()}) :: {:cont | :halt, state(), output()}
-  defp eval_command({:input, statement, args}, {state, output}) do
-    %{facts: facts, bound_args: bound_args} = state
-
+  defp eval_command({:input, statement, args}, {facts, bound_args, output}) do
     updated_facts = update_facts(facts, statement, args)
     updated_bound_args = update_bound_args(bound_args, args)
 
-    {%{facts: updated_facts, bound_args: updated_bound_args}, output}
+    {updated_facts, updated_bound_args, output}
   end
 
-  defp eval_command({:query, statement, args}, {state, output}) do
-    result = evaluate_statement(statement, args, state)
-
-    {state, [result | output]}
-  end
-
-  defp update_facts(facts, statement, args) do
-    Map.update(facts, statement, MapSet.new([args]), fn old -> MapSet.put(old, args) end)
-  end
-
-  defp update_bound_args(bound_args, args) do
-    MapSet.union(bound_args, args)
-  end
-
-  defp evaluate_statement(statement, args, state) do
-    %{facts: facts, bound_args: bound_args} = state
+  defp eval_command({:query, statement, args}, {facts, bound_args, output}) do
     statement_facts = facts[statement]
 
+    result =
+      if statement_facts do
+        variable_result =
+          Enum.map(statement_facts, &Enum.zip(args, &1))
+          |> Enum.map(&eval_unbound(&1, statement_facts, args, bound_args))
+          |> Enum.map(&pattern_match/1)
+      else
+        [[false]]
+      end
+
+    {facts, bound_args, [result | output]}
+  end
+
+  defp pattern_match(results) do
     cond do
-      statement_undefined?(state, statement) ->
-        false
-
-      all_args_bound?(args, bound_args) ->
-        eval_predicate(statement_facts, args)
-
-      only_one_of_one_args_unbound?(args, bound_args) ->
-        eval_single_unbound_arg(statement_facts, Enum.at(args, 0))
-
-      one_of_two_args_unbound?(args, bound_args) ->
-        eval_one_of_two_unbound_args(statement_facts, args, bound_args)
-
-      true ->
-        nil
-        # MapSet.difference/intersection
+      Enum.all?(results, &(&1 == true)) -> [true]
+      Enum.any?(results, &(&1 == false)) -> [false]
+      same_values_not_equal?(results) -> [false]
+      true -> results
     end
   end
 
-  defp statement_undefined?(%{facts: facts}, statement), do: not Map.has_key?(facts, statement)
-
-  defp all_args_bound?(args, bound_args), do: MapSet.subset?(args, bound_args)
-
-  defp only_one_of_one_args_unbound?(args, bound_args), do: MapSet.disjoint?(bound_args, args)
-
-  defp one_of_two_args_unbound?(args, bound_args) do
-    num_of_unbound_args = MapSet.difference(args, bound_args) |> MapSet.size()
-    num_of_unbound_args == 1
+  defp same_values_not_equal?(results) do
+    results
+    |> Enum.filter(&is_tuple(&1))
+    |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+    |> Enum.any?(fn {k, v} -> length(v) > 1 end)
   end
 
-  defp eval_predicate(statement_facts, args) do
-    MapSet.member?(statement_facts, args)
-  end
+  defp eval_unbound(args_to_values, statement_facts, args, bound_args) do
+    Enum.map(args_to_values, fn
+      {x, x} ->
+        true
 
-  defp eval_single_unbound_arg(statement_facts, arg) do
-    # TODO This line is a little wonky
-    Enum.map(statement_facts, &%{arg => MapSet.to_list(&1) |> hd()})
-  end
-
-  defp eval_one_of_two_unbound_args(statement_facts, args, bound_args) do
-    statement_facts
-    |> MapSet.to_list()
-    |> Enum.reject(&MapSet.disjoint?(&1, args))
-    |> Enum.map(fn fact ->
-      [variable] = Enum.reject(args, &MapSet.member?(bound_args, &1))
-
-      [value] = MapSet.difference(fact, args) |> MapSet.to_list()
-
-      %{variable => value}
+      {arg, value} ->
+        if not MapSet.member?(bound_args, arg) do
+          {arg, value}
+        else
+          false
+        end
     end)
+  end
+
+  defp update_facts(facts, statement, args) do
+    Map.update(facts, statement, [args], fn old -> [args | old] end)
+  end
+
+  defp update_bound_args(bound_args, args) do
+    MapSet.union(bound_args, MapSet.new(args))
   end
 end
