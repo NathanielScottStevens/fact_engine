@@ -1,5 +1,9 @@
 defmodule FactEngine.Parser do
-  # string -> {:ok, [{statement, command, [args]}]}
+  @type command() :: :input | :query
+  @type statement() :: String.t()
+  @type args() :: [String.t()]
+
+  @spec parse(String.t()) :: {:ok, [{command(), statement(), args()}]}
   def parse(input) do
     result =
       input

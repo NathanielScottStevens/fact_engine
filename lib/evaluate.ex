@@ -1,4 +1,11 @@
 defmodule FactEngine.Evaluate do
+  alias FactEngine.Parser
+  @type arg() :: String.t()
+  @type value() :: String.t()
+  @type match_results() :: true | false | {arg(), value}
+  @type query_results() :: [match_results()]
+
+  @spec eval([{Parser.command(), Parser.statement(), Parser.args()}]) :: {:ok, [[query_results]]}
   def eval(input) do
     {_, _, output} = Enum.reduce(input, {%{}, MapSet.new(), []}, &eval_command/2)
     query_output = Enum.reverse(output)
