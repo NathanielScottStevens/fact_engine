@@ -3,7 +3,7 @@ defmodule FormatterTest do
   alias FactEngine.Formatter
 
   test "formats booleans" do
-    assert {:ok, ["---", "true"]} == Formatter.format([true])
+    assert {:ok, ["---", "true"]} == Formatter.format([[[true]]])
   end
 
   test "formats list of maps" do

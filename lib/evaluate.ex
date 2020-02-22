@@ -2,10 +2,11 @@ defmodule FactEngine.Evaluate do
   alias FactEngine.Parser
   @type arg() :: String.t()
   @type value() :: String.t()
-  @type match_results() :: true | false | {arg(), value}
-  @type query_results() :: [match_results()]
+  @type program_output() :: [query_results()]
+  @type query_results() :: [true | false | match_results()]
+  @type match_results() :: [{arg(), value}]
 
-  @spec eval([{Parser.command(), Parser.statement(), Parser.args()}]) :: {:ok, [[query_results]]}
+  @spec eval([{Parser.command(), Parser.statement(), Parser.args()}]) :: {:ok, program_output()}
   def eval(input) do
     {_, _, output} = Enum.reduce(input, {%{}, MapSet.new(), []}, &eval_command/2)
     query_output = Enum.reverse(output)
@@ -29,18 +30,31 @@ defmodule FactEngine.Evaluate do
           Enum.map(statement_facts, &Enum.zip(args, &1))
           |> Enum.map(&eval_unbound(&1, statement_facts, args, bound_args))
           |> Enum.map(&pattern_match/1)
+          |> IO.inspect(label: "lib/evaluate.ex:33")
+          |> clean_result()
       else
-        [[false]]
+        [false]
       end
 
     {facts, bound_args, [result | output]}
   end
 
+  defp clean_result(results) when is_list(results) do
+    cond do
+      Enum.all?(results, &(&1 == true)) -> true
+      Enum.any?(results, &(&1 == false)) -> false
+      true -> Enum.reject(results, &is_boolean/1)
+    end
+    |> IO.inspect(label: "lib/evaluate.ex:47")
+  end
+
+  defp clean_result(results), do: results
+
   defp pattern_match(results) do
     cond do
-      Enum.all?(results, &(&1 == true)) -> [true]
-      Enum.any?(results, &(&1 == false)) -> [false]
-      same_values_not_equal?(results) -> [false]
+      Enum.all?(results, &(&1 == true)) -> true
+      Enum.any?(results, &(&1 == false)) -> false
+      same_values_not_equal?(results) -> false
       true -> results
     end
   end

@@ -1,4 +1,5 @@
 defmodule FactEngine.Formatter do
+  @spec format(FactEngine.Evaluate.program_output()) :: {:ok, [String.t()]}
   def format(output) do
     {:ok, Enum.flat_map(output, &format_line/1)}
   end

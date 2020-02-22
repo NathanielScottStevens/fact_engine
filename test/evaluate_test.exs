@@ -8,7 +8,7 @@ defmodule EvaluateTest do
       {:query, "is_a_cat", ["lucy"]}
     ]
 
-    assert {:ok, [[[true]]]} == Evaluate.eval(input)
+    assert {:ok, [[true]]} == Evaluate.eval(input)
   end
 
   test "returns single argument statement as false when false" do
@@ -18,7 +18,7 @@ defmodule EvaluateTest do
       {:query, "is_a_cat", ["ben"]}
     ]
 
-    assert {:ok, [[[false]]]} == Evaluate.eval(input)
+    assert {:ok, [[false]]} == Evaluate.eval(input)
   end
 
   test "returns multiple queries" do
@@ -29,12 +29,12 @@ defmodule EvaluateTest do
       {:query, "is_a_cat", ["lucy"]}
     ]
 
-    assert {:ok, [[[false]], [[true]]]} == Evaluate.eval(input)
+    assert {:ok, [[false], [true]]} == Evaluate.eval(input)
   end
 
   test "returns false when statement is undefined" do
     input = [{:query, "is_a_cat", ["lucy"]}]
-    assert {:ok, [[[false]]]} == Evaluate.eval(input)
+    assert {:ok, [[false]]} == Evaluate.eval(input)
   end
 
   test "can handle multiple arg statements" do
@@ -43,7 +43,7 @@ defmodule EvaluateTest do
       {:query, "are_friends", ["alex", "sam"]}
     ]
 
-    assert {:ok, [[[true]]]} == Evaluate.eval(input)
+    assert {:ok, [[true]]} == Evaluate.eval(input)
   end
 
   test "returns all matching single arguments" do
@@ -77,7 +77,7 @@ defmodule EvaluateTest do
       {:query, "make_a_triple", ["X", "X", "Y"]}
     ]
 
-    expected = {:ok, [[[false], [{"X", "3"}, true, {"Y", "5"}]], [[false], [false]]]}
+    expected = {:ok, [[[{"X", "3"}, {"Y", "5"}]], [false]]}
     assert expected == Evaluate.eval(input)
   end
 end
