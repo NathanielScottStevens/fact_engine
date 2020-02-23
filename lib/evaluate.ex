@@ -3,8 +3,8 @@ defmodule FactEngine.Evaluate do
   @type arg() :: String.t()
   @type value() :: String.t()
   @type program_output() :: [query_results()]
-  @type match_results() :: [{arg(), value}]
-  @type query_results() :: [true | false | match_results()]
+  @type query_results() :: true | false | [match_results()]
+  @type match_results() :: [{arg(), value()}]
   @type facts() :: %{required(Parser.statement()) => [Parser.args()]}
   @type bound_args() :: MapSet.t(Parser.args())
   @type accumulator() :: {
@@ -16,6 +16,7 @@ defmodule FactEngine.Evaluate do
   @spec eval([{Parser.command(), Parser.statement(), Parser.args()}]) :: {:ok, program_output()}
   def eval(input) do
     {_, _, output} = Enum.reduce(input, {%{}, MapSet.new(), []}, &eval_command/2)
+
     query_output = Enum.reverse(output)
 
     {:ok, query_output}
@@ -38,8 +39,9 @@ defmodule FactEngine.Evaluate do
         statement_facts
         |> Enum.map(&Enum.zip(args, &1))
         |> Enum.map(&eval_unbound(&1, bound_args))
-        |> Enum.map(&pattern_match/1)
-        |> clean_result()
+        |> pattern_match()
+        |> Enum.map(&clean_result/1)
+        |> simplify()
       else
         false
       end
@@ -59,8 +61,8 @@ defmodule FactEngine.Evaluate do
 
   @spec eval_unbound([{Parser.args(), Parser.args()}], bound_args) ::
           query_results()
-  defp eval_unbound(args_to_values, bound_args) do
-    Enum.map(args_to_values, fn
+  defp eval_unbound(args_to_fact_value, bound_args) do
+    Enum.map(args_to_fact_value, fn
       {x, x} ->
         true
 
@@ -73,19 +75,18 @@ defmodule FactEngine.Evaluate do
     end)
   end
 
-  @spec pattern_match([query_results()]) :: true | false | [query_results()]
+  @spec(pattern_match([query_results()]) :: [true], [false], query_results())
   defp pattern_match(results) do
     cond do
-      Enum.all?(results, &(&1 == true)) -> true
-      Enum.any?(results, &(&1 == false)) -> false
-      same_values_not_equal?(results) -> false
+      Enum.all?(results, &(&1 == true)) -> [true]
+      Enum.any?(results, &(&1 == false)) -> [false]
+      same_values_not_equal?(results) -> [false]
       true -> results
     end
   end
 
-  # TODO: write this as a reduce
-  @spec clean_result([query_results()]) :: query_results()
-  defp clean_result(results) do
+  @spec clean_result(query_results()) :: query_results()
+  defp clean_result(results) when is_list(results) do
     Enum.reduce(results, {true, []}, fn result, {truth, variables} ->
       case result do
         false -> {false, variables}
@@ -93,19 +94,32 @@ defmodule FactEngine.Evaluate do
         var -> {truth, [var | variables]}
       end
     end)
+    |> case do
+      {true, []} -> true
+      {true, variables} -> variables
+      _ -> false
+    end
+  end
 
-    # cond do
-    #   Enum.all?(results, &(&1 == true)) -> true
-    #   Enum.any?(results, &(&1 == false)) -> false
-    #   true -> Enum.reject(results, &is_boolean/1)
-    # end
+  defp clean_result(results), do: results
+
+  @spec simplify([true | false | {arg(), value()}]) :: true | false | match_results()
+  defp simplify(all_results) do
+    case all_results do
+      [true] -> true
+      [false] -> false
+      list_of_matches -> Enum.reject(list_of_matches, &is_boolean/1)
+    end
   end
 
   @spec same_values_not_equal?([query_results()]) :: true | false
   defp same_values_not_equal?(results) do
-    results
-    |> Enum.filter(&is_tuple(&1))
-    |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
-    |> Enum.any?(fn {_, v} -> length(v) > 1 end)
+    Enum.map(results, fn result ->
+      result
+      |> Enum.filter(&is_tuple(&1))
+      |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+      |> Enum.any?(fn {_, v} -> length(v) > 1 end)
+    end)
+    |> Enum.any?()
   end
 end
