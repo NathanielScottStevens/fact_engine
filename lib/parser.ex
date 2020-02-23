@@ -19,16 +19,10 @@ defmodule FactEngine.Parser do
   end
 
   defp convert(["INPUT", statement | args]) do
-    {:input, statement, create_set(args)}
+    {:input, statement, args}
   end
 
   defp convert(["QUERY", statement | args]) do
-    {:query, statement, create_set(args)}
+    {:query, statement, args}
   end
-
-  defp create_set(args) when is_list(args) do
-    MapSet.new(args)
-  end
-
-  defp create_set(arg), do: MapSet.new([arg])
 end
