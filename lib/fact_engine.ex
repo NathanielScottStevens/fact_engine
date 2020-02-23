@@ -11,7 +11,7 @@ defmodule FactEngine do
     |> apply_to_ok(&Parser.parse/1)
     |> apply_to_ok(&Evaluate.eval/1)
     |> apply_to_ok(&Formatter.format/1)
-    |> apply_to_ok(&print/1)
+    |> print()
   end
 
   def main(_) do
@@ -19,9 +19,11 @@ defmodule FactEngine do
   end
 
   defp apply_to_ok({:ok, value}, func), do: func.(value)
-  defp apply_to_ok(error), do: error
+  defp apply_to_ok(error, _), do: error
 
-  defp print(results) do
+  defp print({:error, :enoent}), do: IO.puts("File not found")
+
+  defp print({:ok, results}) do
     Enum.each(results, &IO.puts/1)
   end
 end

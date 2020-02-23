@@ -40,8 +40,8 @@ defmodule FactEngine.Evaluate do
         |> pair_with(args)
         |> Enum.map(&eval_arg_pairings_without_variables(&1, bound_args))
         |> apply_pattern_match()
-        |> Enum.map(&clean_result/1)
-        |> simplify()
+        |> Enum.map(&aggregate_query_results/1)
+        |> flatten_output()
       else
         false
       end
@@ -72,7 +72,7 @@ defmodule FactEngine.Evaluate do
         true
 
       {arg, value} ->
-        if not MapSet.member?(bound_args, arg) do
+        unless MapSet.member?(bound_args, arg) do
           {arg, value}
         else
           false
@@ -90,8 +90,8 @@ defmodule FactEngine.Evaluate do
     end
   end
 
-  @spec clean_result(query_results()) :: query_results()
-  defp clean_result(results) when is_list(results) do
+  @spec aggregate_query_results(query_results()) :: query_results()
+  defp aggregate_query_results(results) when is_list(results) do
     Enum.reduce(results, {true, []}, fn result, {truth, variables} ->
       case result do
         false -> {false, variables}
@@ -106,10 +106,10 @@ defmodule FactEngine.Evaluate do
     end
   end
 
-  defp clean_result(results), do: results
+  defp aggregate_query_results(results), do: results
 
-  @spec simplify([true | false | {arg(), value()}]) :: true | false | match_results()
-  defp simplify(all_results) do
+  @spec flatten_output([true | false | {arg(), value()}]) :: true | false | match_results()
+  defp flatten_output(all_results) do
     case all_results do
       [true] -> true
       [false] -> false

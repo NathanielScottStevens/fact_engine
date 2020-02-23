@@ -22,14 +22,16 @@ defmodule FactEngine.MixProject do
 
   defp aliases do
     [
-      exec: ["escript.build", "cmd ./fact_engine"]
+      build: ["deps.get", "escript.build"],
+      exec: ["cmd ./fact_engine"]
     ]
   end
 
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:dialyxir, "~> 1.0.0-rc.7", only: [:dev], runtime: false}
+      {:dialyxir, "~> 1.0.0-rc.7", only: [:dev], runtime: false},
+      {:credo, "~> 1.2", only: [:dev, :test], runtime: false}
     ]
   end
 end
