@@ -37,9 +37,9 @@ defmodule FactEngine.Evaluate do
     result =
       if statement_facts do
         statement_facts
-        |> Enum.map(&Enum.zip(args, &1))
-        |> Enum.map(&eval_unbound(&1, bound_args))
-        |> pattern_match()
+        |> pair_with(args)
+        |> Enum.map(&eval_arg_pairings_without_variables(&1, bound_args))
+        |> apply_pattern_match()
         |> Enum.map(&clean_result/1)
         |> simplify()
       else
@@ -59,9 +59,14 @@ defmodule FactEngine.Evaluate do
     MapSet.union(bound_args, MapSet.new(args))
   end
 
-  @spec eval_unbound([{Parser.args(), Parser.args()}], bound_args) ::
+  @spec pair_with(Parser.args(), Parser.args()) :: [{arg(), arg()}]
+  defp pair_with(statement_facts, args) do
+    Enum.map(statement_facts, &Enum.zip(args, &1))
+  end
+
+  @spec eval_arg_pairings_without_variables([{Parser.args(), Parser.args()}], bound_args) ::
           query_results()
-  defp eval_unbound(args_to_fact_value, bound_args) do
+  defp eval_arg_pairings_without_variables(args_to_fact_value, bound_args) do
     Enum.map(args_to_fact_value, fn
       {x, x} ->
         true
@@ -75,8 +80,8 @@ defmodule FactEngine.Evaluate do
     end)
   end
 
-  @spec(pattern_match([query_results()]) :: [true], [false], query_results())
-  defp pattern_match(results) do
+  @spec(apply_pattern_match([query_results()]) :: [true], [false], query_results())
+  defp apply_pattern_match(results) do
     cond do
       Enum.all?(results, &(&1 == true)) -> [true]
       Enum.any?(results, &(&1 == false)) -> [false]
