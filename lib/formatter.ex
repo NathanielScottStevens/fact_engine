@@ -1,20 +1,20 @@
 defmodule FactEngine.Formatter do
+  @spec format(FactEngine.Evaluate.program_output()) :: {:ok, [String.t()]}
   def format(output) do
-    {:ok, Enum.flat_map(output, &format_line/1)}
+    {:ok, Enum.flat_map(output, &format_query_result/1)}
   end
 
-  defp format_line(line) when is_boolean(line) do
-    ["---", to_string(line)]
+  defp format_query_result(query_result) when is_boolean(query_result) do
+    ["---", to_string(query_result)]
   end
 
-  defp format_line(line) when is_list(line) do
-    ["---" | Enum.map(line, &format_map/1)]
+  defp format_query_result(query_result) when is_list(query_result) do
+    ["---" | Enum.map(query_result, &format_match/1)]
   end
 
-  defp format_line(line), do: IO.inspect(line)
-
-  defp format_map(map) when is_map(map) and map_size(map) == 1 do
-    [{k, v}] = Map.to_list(map)
-    "#{k}: #{v}"
+  defp format_match(match) do
+    match
+    |> Enum.map(fn {var, val} -> "#{var}: #{val}" end)
+    |> Enum.join(", ")
   end
 end

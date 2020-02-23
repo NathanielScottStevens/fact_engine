@@ -2,17 +2,28 @@ defmodule FactEngine.Evaluate do
   alias FactEngine.Parser
   @type arg() :: String.t()
   @type value() :: String.t()
-  @type match_results() :: true | false | {arg(), value}
-  @type query_results() :: [match_results()]
+  @type program_output() :: [query_results()]
+  @type query_results() :: true | false | [match_results()]
+  @type match_results() :: [{arg(), value()}]
+  @type facts() :: %{required(Parser.statement()) => [Parser.args()]}
+  @type bound_args() :: MapSet.t(Parser.args())
+  @type accumulator() :: {
+          facts(),
+          bound_args(),
+          program_output()
+        }
 
-  @spec eval([{Parser.command(), Parser.statement(), Parser.args()}]) :: {:ok, [[query_results]]}
+  @spec eval([{Parser.command(), Parser.statement(), Parser.args()}]) :: {:ok, program_output()}
   def eval(input) do
     {_, _, output} = Enum.reduce(input, {%{}, MapSet.new(), []}, &eval_command/2)
+
     query_output = Enum.reverse(output)
 
     {:ok, query_output}
   end
 
+  @spec eval_command({Parser.command(), Parser.statement(), Parser.args()}, accumulator()) ::
+          accumulator()
   defp eval_command({:input, statement, args}, {facts, bound_args, output}) do
     updated_facts = update_facts(facts, statement, args)
     updated_bound_args = update_bound_args(bound_args, args)
@@ -25,35 +36,33 @@ defmodule FactEngine.Evaluate do
 
     result =
       if statement_facts do
-        variable_result =
-          Enum.map(statement_facts, &Enum.zip(args, &1))
-          |> Enum.map(&eval_unbound(&1, statement_facts, args, bound_args))
-          |> Enum.map(&pattern_match/1)
+        statement_facts
+        |> Enum.map(&Enum.zip(args, &1))
+        |> Enum.map(&eval_unbound(&1, bound_args))
+        |> pattern_match()
+        |> Enum.map(&clean_result/1)
+        |> simplify()
       else
-        [[false]]
+        false
       end
 
     {facts, bound_args, [result | output]}
   end
 
-  defp pattern_match(results) do
-    cond do
-      Enum.all?(results, &(&1 == true)) -> [true]
-      Enum.any?(results, &(&1 == false)) -> [false]
-      same_values_not_equal?(results) -> [false]
-      true -> results
-    end
+  @spec update_facts(facts(), Parser.statement(), Parser.args()) :: facts()
+  defp update_facts(facts, statement, args) do
+    Map.update(facts, statement, [args], fn old -> [args | old] end)
   end
 
-  defp same_values_not_equal?(results) do
-    results
-    |> Enum.filter(&is_tuple(&1))
-    |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
-    |> Enum.any?(fn {k, v} -> length(v) > 1 end)
+  @spec update_bound_args(bound_args(), Parser.args()) :: bound_args()
+  defp update_bound_args(bound_args, args) do
+    MapSet.union(bound_args, MapSet.new(args))
   end
 
-  defp eval_unbound(args_to_values, statement_facts, args, bound_args) do
-    Enum.map(args_to_values, fn
+  @spec eval_unbound([{Parser.args(), Parser.args()}], bound_args) ::
+          query_results()
+  defp eval_unbound(args_to_fact_value, bound_args) do
+    Enum.map(args_to_fact_value, fn
       {x, x} ->
         true
 
@@ -66,11 +75,51 @@ defmodule FactEngine.Evaluate do
     end)
   end
 
-  defp update_facts(facts, statement, args) do
-    Map.update(facts, statement, [args], fn old -> [args | old] end)
+  @spec(pattern_match([query_results()]) :: [true], [false], query_results())
+  defp pattern_match(results) do
+    cond do
+      Enum.all?(results, &(&1 == true)) -> [true]
+      Enum.any?(results, &(&1 == false)) -> [false]
+      same_values_not_equal?(results) -> [false]
+      true -> results
+    end
   end
 
-  defp update_bound_args(bound_args, args) do
-    MapSet.union(bound_args, MapSet.new(args))
+  @spec clean_result(query_results()) :: query_results()
+  defp clean_result(results) when is_list(results) do
+    Enum.reduce(results, {true, []}, fn result, {truth, variables} ->
+      case result do
+        false -> {false, variables}
+        true -> {truth, variables}
+        var -> {truth, [var | variables]}
+      end
+    end)
+    |> case do
+      {true, []} -> true
+      {true, variables} -> variables
+      _ -> false
+    end
+  end
+
+  defp clean_result(results), do: results
+
+  @spec simplify([true | false | {arg(), value()}]) :: true | false | match_results()
+  defp simplify(all_results) do
+    case all_results do
+      [true] -> true
+      [false] -> false
+      list_of_matches -> Enum.reject(list_of_matches, &is_boolean/1)
+    end
+  end
+
+  @spec same_values_not_equal?([query_results()]) :: true | false
+  defp same_values_not_equal?(results) do
+    Enum.map(results, fn result ->
+      result
+      |> Enum.filter(&is_tuple(&1))
+      |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+      |> Enum.any?(fn {_, v} -> length(v) > 1 end)
+    end)
+    |> Enum.any?()
   end
 end
